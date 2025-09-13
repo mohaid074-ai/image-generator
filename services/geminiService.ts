@@ -2,23 +2,43 @@ import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
 import type { EditMode } from '../types';
 import { fileToGenerativePart } from '../types';
 
-const API_KEY = process.env.API_KEY;
+let ai: GoogleGenAI | null = null;
 
-if (!API_KEY) {
-  throw new Error("API_KEY environment variable is not set.");
+/**
+ * Initializes the GoogleGenAI client with the provided API key.
+ * This must be called from the UI before any other service functions are used.
+ * @param apiKey The user's Google AI Studio API key.
+ */
+export const initializeGemini = (apiKey: string) => {
+  if (!apiKey) {
+    console.warn("Attempted to initialize Gemini without an API key.");
+    ai = null; // Ensure client is nullified if key is invalid or cleared
+    return;
+  }
+  ai = new GoogleGenAI({ apiKey });
+};
+
+/**
+ * Gets the initialized AI client. Throws an error if it hasn't been initialized.
+ * @returns The initialized GoogleGenAI instance.
+ */
+const getAiClient = (): GoogleGenAI => {
+    if (!ai) {
+        throw new Error("Gemini AI client not initialized. Please provide an API key in the settings.");
+    }
+    return ai;
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export const enhancePrompt = async (prompt: string): Promise<string> => {
   try {
-    const response = await ai.models.generateContent({
+    const aiClient = getAiClient();
+    const response = await aiClient.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: `Enhance the following image generation prompt with vivid details, cinematic lighting, and a specific art style. Keep it concise and focused on visual elements. Original prompt: "${prompt}"`,
         config: {
             temperature: 0.8,
             maxOutputTokens: 100,
-            // Fix: Added thinkingConfig as required by the guidelines when maxOutputTokens is set for gemini-2.5-flash.
             thinkingConfig: { thinkingBudget: 50 },
         }
     });
@@ -31,7 +51,8 @@ export const enhancePrompt = async (prompt: string): Promise<string> => {
 
 export const generateImage = async (prompt: string): Promise<string> => {
   try {
-    const response = await ai.models.generateImages({
+    const aiClient = getAiClient();
+    const response = await aiClient.models.generateImages({
         model: 'imagen-4.0-generate-001',
         prompt: prompt,
         config: {
@@ -67,10 +88,11 @@ export const editImage = async (prompt: string, imageFile: File, mode: EditMode)
     }
 
     try {
+        const aiClient = getAiClient();
         const imagePart = await fileToGenerativePart(imageFile);
         const textPart = { text: internalPrompt };
 
-        const response: GenerateContentResponse = await ai.models.generateContent({
+        const response: GenerateContentResponse = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash-image-preview',
             contents: { parts: [imagePart, textPart] },
             config: {

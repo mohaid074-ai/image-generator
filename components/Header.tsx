@@ -1,7 +1,10 @@
-
 import React from 'react';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+    onClearApiKey: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onClearApiKey }) => {
   return (
     <header className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-10">
       <div className="container mx-auto px-4 py-4 flex items-center">
@@ -9,6 +12,14 @@ export const Header: React.FC = () => {
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
         </svg>
         <h1 className="text-2xl font-bold tracking-tight text-white">Gemini Image Studio</h1>
+        <div className="ml-auto">
+            <button
+                onClick={onClearApiKey}
+                className="px-3 py-1.5 bg-gray-700 text-white rounded-md text-xs font-semibold hover:bg-gray-600 transition-colors"
+            >
+                Change API Key
+            </button>
+        </div>
       </div>
     </header>
   );

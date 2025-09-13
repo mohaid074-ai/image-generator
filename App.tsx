@@ -1,15 +1,18 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { PromptInput } from './components/PromptInput';
 import { ImageUpload } from './components/ImageUpload';
 import { ActionButtons } from './components/ActionButtons';
 import { ImageDisplay } from './components/ImageDisplay';
 import { Footer } from './components/Footer';
-import { enhancePrompt, generateImage, editImage } from './services/geminiService';
+import { ApiKeyInput } from './components/ApiKeyInput';
+import { enhancePrompt, generateImage, editImage, initializeGemini } from './services/geminiService';
 import type { EditMode } from './types';
 
+const API_KEY_STORAGE_KEY = 'gemini-api-key';
+
 function App() {
+  const [isApiKeySet, setIsApiKeySet] = useState<boolean>(false);
   const [prompt, setPrompt] = useState<string>('A photorealistic image of a majestic lion in the savanna at sunset, detailed fur, warm lighting.');
   const [inputImage, setInputImage] = useState<File | null>(null);
   const [inputImagePreview, setInputImagePreview] = useState<string | null>(null);
@@ -17,6 +20,26 @@ function App() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+    if (storedApiKey) {
+      initializeGemini(storedApiKey);
+      setIsApiKeySet(true);
+    }
+  }, []);
+
+  const handleApiKeySave = (apiKey: string) => {
+    localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
+    initializeGemini(apiKey);
+    setIsApiKeySet(true);
+  };
+
+  const handleClearApiKey = () => {
+    localStorage.removeItem(API_KEY_STORAGE_KEY);
+    initializeGemini(''); // Nullify the client
+    setIsApiKeySet(false);
+  };
 
   const handleImageUpload = (file: File | null) => {
     setInputImage(file);
@@ -91,9 +114,13 @@ function App() {
     }
   }, [prompt, inputImage]);
 
+  if (!isApiKeySet) {
+    return <ApiKeyInput onSave={handleApiKeySave} />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col font-sans">
-      <Header />
+      <Header onClearApiKey={handleClearApiKey} />
       <main className="flex-grow container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column: Inputs */}
